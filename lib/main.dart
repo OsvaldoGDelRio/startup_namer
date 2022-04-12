@@ -1,117 +1,132 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:convert';
 
-void main() => runApp(MyApp());
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+Future<List<Movie>> fetchMovies(http.Client client) async {
+  final response = await client
+      .get(Uri.parse('https://udg.osvaldogonzalez.name/api/movies/'));
+
+  // Use the compute function to run parsePhotos in a separate isolate.
+  return compute(parseMovies, response.body);
+}
+
+// A function that converts a response body into a List<Photo>.
+List<Movie> parseMovies(String responseBody) {
+  final parsed = jsonDecode(responseBody).cast<Map<String, dynamic>>();
+
+  return parsed.map<Movie>((json) => Movie.fromJson(json)).toList();
+}
+
+class Movie {
+  final int id;
+  final String title;
+  final int year;
+  final String synopsis;
+  final String cover;
+
+  const Movie({
+    required this.id,
+    required this.title,
+    required this.year,
+    required this.synopsis,
+    required this.cover,
+  });
+
+  factory Movie.fromJson(Map<String, dynamic> json) {
+    return Movie(
+      id: json['id'] as int,
+      title: json['title'] as String,
+      year: json['year'] as int,
+      synopsis: json['synopsis'] as String,
+      cover: json['cover'] as String,
+    );
+  }
+}
+
+void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
+    const appTitle = 'Catálogo de peliculas';
 
-    Widget titleSection = Container(
-      padding: const EdgeInsets.all(32),
-      child: Row(
-        children: [
-          Expanded(
-            /*1*/
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                /*2*/
-                Container(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'Oeschinen Lake Campground',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Kandersteg, Switzerland',
-                  style: TextStyle(
-                    color: Colors.grey[500],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          /*3*/
-          Icon(
-            Icons.star,
-            color: Colors.red[500],
-          ),
-          Text('41'),
-        ],
-      ),
-    );
-
-    Column _buildButtonColumn(Color color, IconData icon, String label) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, color: color),
-        Container(
-          margin: const EdgeInsets.only(top: 8),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: color,
-            ),
-          ),
-        ),
-      ],
+    return const MaterialApp(
+      title: appTitle,
+      home: MyHomePage(title: appTitle),
     );
   }
+}
 
-    Color color = Theme.of(context).primaryColor;
+class MyHomePage extends StatelessWidget {
+  const MyHomePage({Key? key, required this.title}) : super(key: key);
 
-    Widget buttonSection = Container(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildButtonColumn(color, Icons.call, 'CALL'),
-          _buildButtonColumn(color, Icons.near_me, 'ROUTE'),
-          _buildButtonColumn(color, Icons.share, 'SHARE'),
-        ],
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
       ),
-    );
-
-    Widget textSection = Container(
-      padding: const EdgeInsets.all(32),
-      child: Text(
-        'Lake Oeschinen lies at the foot of the Blüemlisalp in the Bernese '
-            'Alps. Situated 1,578 meters above sea level, it is one of the '
-            'larger Alpine Lakes. A gondola ride from Kandersteg, followed by a '
-            'half-hour walk through pastures and pine forest, leads you to the '
-            'lake, which warms to 20 degrees Celsius in the summer. Activities '
-            'enjoyed here include rowing, and riding the summer toboggan run.',
-        softWrap: true,
+      body: FutureBuilder<List<Movie>>(
+        future: fetchMovies(http.Client()),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text('An error has occurred!'),
+            );
+          } else if (snapshot.hasData) {
+            return MoviesList(movies: snapshot.data!);
+          } else {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+        },
       ),
-    );
-
-    return MaterialApp(
-      title: 'Bienvenido al catalogo',
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text('Bienvenido al catalogo'),
-        ),
-        body: ListView(
-          children: [
-            Image.asset(
-              'img/catalogoimagen.png',
-              width: 600,
-              height: 240,
-              fit: BoxFit.cover,
-            ),
-            titleSection,
-            buttonSection,
-            textSection,
-          ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {},
+        tooltip: 'Agregar pelicula',
+        child: Icon(
+          Icons.add,
+          color: Colors.white,
         ),
       ),
     );
   }
+}
 
+class MoviesList extends StatelessWidget {
+  const MoviesList({Key? key, required this.movies}) : super(key: key);
+
+  final List<Movie> movies;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      itemCount: movies.length,
+      itemBuilder: (context, index) {
+        return ListTile(
+          onTap: () {},
+          onLongPress: () {},
+          leading: CircleAvatar(
+            backgroundImage: NetworkImage(movies[index].cover),
+            radius: 30,
+          ),
+          title: Text(movies[index].title),
+          subtitle: Text('${movies[index].synopsis}'),
+          //isThreeLine: true,
+          trailing: Icon(
+            Icons.keyboard_arrow_right,
+            color: Colors.grey,
+          ),
+        );
+      },
+    );
+  }
 }
