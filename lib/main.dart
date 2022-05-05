@@ -114,17 +114,10 @@ class MoviesList extends StatelessWidget {
         return ListTile(
           onTap: () {},
           onLongPress: () {},
-          leading: CircleAvatar(
-            backgroundImage: NetworkImage(movies[index].cover),
-            radius: 30,
-          ),
           title: Text(movies[index].title),
-          subtitle: Text('${movies[index].synopsis}'),
+          subtitle: Text('${movies[index].year}'),
           //isThreeLine: true,
-          trailing: Icon(
-            Icons.keyboard_arrow_right,
-            color: Colors.grey,
-          ),
+          trailing: Image.network(movies[index].cover),
         );
       },
     );
